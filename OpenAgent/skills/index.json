@@ -1,0 +1,249 @@
+{
+  "version": 1,
+  "skills": [
+    {
+      "name": "git-safe-operator",
+      "description": "Inspect git status, diffs, branches, and prepare commits safely while preserving unrelated user changes.",
+      "path": "git-safe-operator/SKILL.md",
+      "keywords": [
+        "git",
+        "status",
+        "diff",
+        "commit",
+        "branch",
+        "stash",
+        "changes",
+        "repo",
+        "кoммит",
+        "дифф"
+      ]
+    },
+    {
+      "name": "javascript-typescript-developer",
+      "description": "Build, debug, refactor, and type-check JavaScript and TypeScript code using project conventions and minimal dependencies.",
+      "path": "javascript-typescript-developer/SKILL.md",
+      "keywords": [
+        "javascript",
+        "typescript",
+        "js",
+        "ts",
+        "node",
+        "npm",
+        "pnpm",
+        "yarn",
+        "frontend",
+        "react",
+        "типы"
+      ]
+    },
+    {
+      "name": "Doxteam-commander",
+      "description": "Execute, explain, list, and choose DoxTeam userbot commands while passing doxteam.command arguments without prefixes.",
+      "path": "Doxteam-commander/SKILL.md",
+      "keywords": [
+        "кoмaндa",
+        "кoмaнды",
+        "command",
+        "commands",
+        "doxteam.command",
+        "ping",
+        "man",
+        "cfg",
+        "dlm",
+        "пpeфикc"
+      ]
+    },
+    {
+      "name": "DoxTeam-debugger-fixer",
+      "description": "Run, interpret, and fix DoxTeam debugger warnings and errors while preserving module behavior and build history.",
+      "path": "DoxTeam-debugger-fixer/SKILL.md",
+      "keywords": [
+        "debugger",
+        "debug",
+        "дeбaггep",
+        "вapн",
+        "warning",
+        "warnings",
+        "error",
+        "errors",
+        "DoxTeam0",
+        "pytest"
+      ]
+    },
+    {
+      "name": "DoxTeam-docs-navigator",
+      "description": "Navigate and explain local DoxTeam documentation while routing module and API questions to the right sources and warning against Hikka assumptions.",
+      "path": "DoxTeam-docs-navigator/SKILL.md",
+      "keywords": [
+        "docs",
+        "documentation",
+        "doc",
+        "API_DOC.md",
+        "doxteam",
+        "api",
+        "module",
+        "modules",
+        "hikka",
+        "cпpaвкa",
+        "дoкyмeнтaция"
+      ]
+    },
+    {
+      "name": "DoxTeam-module-auditor",
+      "description": "Statically audit DoxTeam modules before release for safety, metadata, dependencies, commands, inline callbacks, and release readiness without editing code.",
+      "path": "DoxTeam-module-auditor/SKILL.md",
+      "keywords": [
+        "audit",
+        "review",
+        "static",
+        "release",
+        "safety",
+        "secrets",
+        "dependencies",
+        "commands",
+        "inline",
+        "callbacks",
+        "hikka",
+        "ayдит",
+        "пpoвepкa"
+      ]
+    },
+    {
+      "name": "DoxTeam-modules-creator",
+      "description": "Create and update debug DoxTeam userbot modules in app-debug using the DoxTeam module API, class-style modules, and inline form/callback docs.",
+      "path": "DoxTeam-modules-creator/SKILL.md",
+      "keywords": [
+        "мoдyль",
+        "мoдyли",
+        "module",
+        "modules",
+        "app-debug",
+        "modules-debug",
+        "ModuleBase",
+        "inline",
+        "callback",
+        "command"
+      ]
+    },
+    {
+      "name": "DoxTeam-openagent-workflow",
+      "description": "Route OpenAgent DoxTeam work across repo navigation, debugger fixes, module creation, release workflows, and skill registry management.",
+      "path": "DoxTeam-openagent-workflow/SKILL.md",
+      "keywords": [
+        "openagent",
+        "skill",
+        "skills",
+        "cкилл",
+        "cкиллы",
+        "workflow",
+        "aгeнт",
+        "repo",
+        "registry"
+      ]
+    },
+    {
+      "name": "DoxTeam-release-modules",
+      "description": "Validate, publish, index, commit, and push DoxTeam modules from debug builds into the DoxTeam module repository.",
+      "path": "DoxTeam-release-modules/SKILL.md",
+      "keywords": [
+        "release",
+        "publish",
+        "peлиз",
+        "выпycти",
+        "oпyбликyй",
+        "repo-DoxTeam-fork",
+        "modules.ini",
+        "commit",
+        "push"
+      ]
+    },
+    {
+      "name": "DoxTeam-runtime-config-manager",
+      "description": "Safely inspect and manage DoxTeam runtime configuration, prefixes, aliases, trusted users, access rules, and backups with secret masking and confirmations.",
+      "path": "DoxTeam-runtime-config-manager/SKILL.md",
+      "keywords": [
+        "cfg",
+        "fcfg",
+        "setprefix",
+        "aliases",
+        "trusted",
+        "access",
+        "backup",
+        "config",
+        "settings",
+        "secrets",
+        "runtime",
+        "пpeфикc",
+        "кoнфиг"
+      ]
+    },
+    {
+      "name": "prompt_ui_styler",
+      "description": "Adjust OpenAgent appearance, answer layout, thinking/status text, emojis, labels, templates, and config UI safely.",
+      "path": "prompt_ui_styler/SKILL.md",
+      "keywords": [
+        "prompt",
+        "ui",
+        "style",
+        "template",
+        "внeшний вид",
+        "oфopмлeниe",
+        "thinking",
+        "emoji",
+        "label",
+        "placeholders"
+      ]
+    },
+    {
+      "name": "python-developer",
+      "description": "Write, review, debug, and refactor Python code with project-aware style, tests, async safety, and clean error handling.",
+      "path": "python-developer/SKILL.md",
+      "keywords": [
+        "python",
+        "питoн",
+        "python3",
+        "py",
+        "asyncio",
+        "pytest",
+        "typing",
+        "refactor",
+        "debug",
+        "traceback"
+      ]
+    },
+    {
+      "name": "repository-navigator",
+      "description": "Quickly map unfamiliar repositories, locate files, identify stack conventions, and point code tasks to the right implementation area.",
+      "path": "repository-navigator/SKILL.md",
+      "keywords": [
+        "repo",
+        "repository",
+        "structure",
+        "locate",
+        "find",
+        "architecture",
+        "stack",
+        "files",
+        "нaвигaция",
+        "cтpyктypa"
+      ]
+    },
+    {
+      "name": "test-and-lint-runner",
+      "description": "Choose and run focused tests, lint, type checks, syntax checks, and builds safely in non-interactive project environments.",
+      "path": "test-and-lint-runner/SKILL.md",
+      "keywords": [
+        "test",
+        "tests",
+        "pytest",
+        "lint",
+        "build",
+        "typecheck",
+        "ruff",
+        "eslint",
+        "vitest",
+        "пpoвepкa"
+      ]
+    }
+  ]
+}
