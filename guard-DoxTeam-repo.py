@@ -211,7 +211,7 @@ class Guard(ModuleBase):
     async def _save_joinalert_cfg(self, chat_id: int, enabled: bool) -> None:
         await self.db.db_set(self.name, f"joinalert_{chat_id}", "1" if enabled else "0")
 
-    @event("chataction", incoming=True)
+    @event("chataction")
     async def on_chat_action(self, event_: events.ChatAction.Event) -> None:
         if not event_.user_joined and not event_.user_added:
             return
