@@ -10,7 +10,7 @@ from telethon.tl.functions.channels import EditBannedRequest
 from telethon.tl.functions.messages import EditChatDefaultBannedRightsRequest
 from telethon.tl.types import ChatBannedRights
 
-from core.lib.loader.module_base import ModuleBase, command, watcher
+from core.lib.loader.module_base import ModuleBase, command, event, watcher
 
 UTC = timezone.utc
 
@@ -52,6 +52,30 @@ class Guard(ModuleBase):
             "purge_need_reply_or_count": "<blockquote>❌ Ответь на сообщение (удалит всё до него) или укажи число: <code>purge {N}</code></blockquote>",
             "purge_done": "<blockquote>🧹 Удалено сообщений: <b>{count}</b>.</blockquote>",
             "error": "<blockquote>❌ Внутренняя ошибка. Подробности в логе.</blockquote>",
+            "check_no_target": "<blockquote>❌ Ответь на сообщение или укажи @username/ID.</blockquote>",
+            "check_user_not_found": "<blockquote>❌ Пользователь не найден.</blockquote>",
+            "check_result": (
+                "<blockquote>🔍 <b>Проверка:</b> {user}\n"
+                "ID: <code>{id}</code>\n"
+                "Флаги: {flags}\n"
+                "Оценка риска: <b>{score}</b>/5</blockquote>"
+            ),
+            "flag_none": "чисто, флагов нет",
+            "flag_deleted": "удалённый аккаунт",
+            "flag_scam": "помечен как SCAM",
+            "flag_fake": "помечен как FAKE",
+            "flag_no_photo": "нет фото профиля",
+            "flag_no_username": "нет username",
+            "flag_bot": "бот-аккаунт",
+            "scan_start": "<blockquote>🔎 Сканирую участников...</blockquote>",
+            "scan_result": "<blockquote>🔍 <b>Подозрительные участники ({count}):</b>\n{rows}</blockquote>",
+            "scan_none": "<blockquote>✅ Подозрительных участников не найдено.</blockquote>",
+            "joinalert_on": "<blockquote>🛡 Оповещение о подозрительных новичках включено.</blockquote>",
+            "joinalert_off": "<blockquote>🛡 Оповещение о подозрительных новичках выключено.</blockquote>",
+            "joinalert_msg": (
+                "<blockquote>⚠️ Новый участник с флагами риска: {user}\n"
+                "Флаги: {flags}</blockquote>"
+            ),
         },
         "en": {
             "not_a_group": '<blockquote>❌ This command only works in groups/supergroups.</blockquote>',
@@ -66,6 +90,30 @@ class Guard(ModuleBase):
             "purge_need_reply_or_count": "<blockquote>❌ Reply to a message (deletes everything up to it) or give a number: <code>purge {N}</code></blockquote>",
             "purge_done": "<blockquote>🧹 Deleted messages: <b>{count}</b>.</blockquote>",
             "error": "<blockquote>❌ Internal error. Details written to the log.</blockquote>",
+            "check_no_target": "<blockquote>❌ Reply to a message or give @username/ID.</blockquote>",
+            "check_user_not_found": "<blockquote>❌ User not found.</blockquote>",
+            "check_result": (
+                "<blockquote>🔍 <b>Check:</b> {user}\n"
+                "ID: <code>{id}</code>\n"
+                "Flags: {flags}\n"
+                "Risk score: <b>{score}</b>/5</blockquote>"
+            ),
+            "flag_none": "clean, no flags",
+            "flag_deleted": "deleted account",
+            "flag_scam": "marked SCAM",
+            "flag_fake": "marked FAKE",
+            "flag_no_photo": "no profile photo",
+            "flag_no_username": "no username",
+            "flag_bot": "bot account",
+            "scan_start": "<blockquote>🔎 Scanning members...</blockquote>",
+            "scan_result": "<blockquote>🔍 <b>Suspicious members ({count}):</b>\n{rows}</blockquote>",
+            "scan_none": "<blockquote>✅ No suspicious members found.</blockquote>",
+            "joinalert_on": "<blockquote>🛡 Suspicious-newcomer alerts enabled.</blockquote>",
+            "joinalert_off": "<blockquote>🛡 Suspicious-newcomer alerts disabled.</blockquote>",
+            "joinalert_msg": (
+                "<blockquote>⚠️ New member with risk flags: {user}\n"
+                "Flags: {flags}</blockquote>"
+            ),
         },
     }
 
@@ -112,6 +160,170 @@ class Guard(ModuleBase):
                 ChatBannedRights(until_date=until, send_messages=True),
             )
         )
+
+    # ---------- suspicious-account detection ----------
+
+    def _suspicion_flags(self, user: Any) -> tuple[int, list[str]]:
+        """Score a user using only public Telegram-provided fields
+        (deleted/scam/fake/bot flags, presence of photo/username).
+        Heuristic only — meant to help a human admin review, not to
+        auto-punish anyone."""
+        flags: list[str] = []
+        if getattr(user, "deleted", False):
+            flags.append("flag_deleted")
+        if getattr(user, "scam", False):
+            flags.append("flag_scam")
+        if getattr(user, "fake", False):
+            flags.append("flag_fake")
+        if getattr(user, "bot", False):
+            flags.append("flag_bot")
+        if not getattr(user, "photo", None):
+            flags.append("flag_no_photo")
+        if not getattr(user, "username", None):
+            flags.append("flag_no_username")
+        return len(flags), flags
+
+    async def _resolve_target(
+        self, event: events.NewMessage.Event, args: list[str]
+    ) -> Any | None:
+        if event.reply_to_msg_id:
+            try:
+                reply = await event.get_reply_message()
+                if reply and reply.sender:
+                    return reply.sender
+            except Exception:
+                pass
+        if args:
+            first = args[0]
+            try:
+                if first.startswith("@"):
+                    return await self.client.get_entity(first)
+                if first.lstrip("-").isdigit():
+                    return await self.client.get_entity(int(first))
+            except Exception:
+                return None
+        return None
+
+    async def _get_joinalert_cfg(self, chat_id: int) -> bool:
+        raw = await self.db.db_get(self.name, f"joinalert_{chat_id}")
+        return raw == "1"
+
+    async def _save_joinalert_cfg(self, chat_id: int, enabled: bool) -> None:
+        await self.db.db_set(self.name, f"joinalert_{chat_id}", "1" if enabled else "0")
+
+    @event("chataction", incoming=True)
+    async def on_chat_action(self, event_: events.ChatAction.Event) -> None:
+        if not event_.user_joined and not event_.user_added:
+            return
+        try:
+            if not await self._get_joinalert_cfg(event_.chat_id):
+                return
+            user = await event_.get_user()
+        except Exception:
+            return
+        if user is None or getattr(user, "is_self", False):
+            return
+
+        score, flags = self._suspicion_flags(user)
+        if score < 2:
+            return
+
+        flag_text = ", ".join(self.strings[f] for f in flags)
+        try:
+            await self.client.send_message(
+                event_.chat_id,
+                self.strings("joinalert_msg", user=self._user_link(user), flags=flag_text),
+                parse_mode="html",
+            )
+        except Exception:
+            pass
+
+    @command(
+        "checkuser",
+        alias=["cu"],
+        doc_ru="Проверить аккаунт на подозрительные признаки. Ответь на сообщение или укажи @username/ID.",
+        doc_en="Check an account for suspicious signals. Reply to a message or give @username/ID.",
+    )
+    async def cmd_checkuser(self, event: events.NewMessage.Event) -> None:
+        if not event.is_group:
+            await self.edit(event, self.strings["not_a_group"], as_html=True)
+            return
+
+        args = self.args_raw(event).split()
+        user = await self._resolve_target(event, args)
+        if user is None:
+            await self.edit(event, self.strings["check_no_target"], as_html=True)
+            return
+
+        score, flags = self._suspicion_flags(user)
+        flag_text = ", ".join(self.strings[f] for f in flags) if flags else self.strings["flag_none"]
+
+        await self.edit(
+            event,
+            self.strings(
+                "check_result",
+                user=self._user_link(user),
+                id=user.id,
+                flags=flag_text,
+                score=score,
+            ),
+            as_html=True,
+        )
+
+    @command(
+        "scan",
+        doc_ru="Просканировать участников чата на подозрительные признаки.",
+        doc_en="Scan chat members for suspicious signals.",
+    )
+    async def cmd_scan(self, event: events.NewMessage.Event) -> None:
+        if not event.is_group:
+            await self.edit(event, self.strings["not_a_group"], as_html=True)
+            return
+
+        await self.edit(event, self.strings["scan_start"], as_html=True)
+
+        suspicious: list[tuple[Any, int, list[str]]] = []
+        try:
+            async for user in self.client.iter_participants(event.chat_id, limit=2000):
+                score, flags = self._suspicion_flags(user)
+                if score >= 2:
+                    suspicious.append((user, score, flags))
+        except Exception:
+            await self.edit(event, self.strings["error"], as_html=True)
+            return
+
+        if not suspicious:
+            await self.edit(event, self.strings["scan_none"], as_html=True)
+            return
+
+        suspicious.sort(key=lambda t: t[1], reverse=True)
+        rows = []
+        for user, score, flags in suspicious[:25]:
+            flag_text = ", ".join(self.strings[f] for f in flags)
+            rows.append(f"• {self._user_link(user)} ({score}/5) — {flag_text}")
+
+        await self.edit(
+            event,
+            self.strings("scan_result", count=len(suspicious), rows="\n".join(rows)),
+            as_html=True,
+        )
+
+    @command(
+        "joinalert",
+        doc_ru="Вкл/выкл оповещение о подозрительных новичках. Использование: joinalert {on/off}",
+        doc_en="Enable/disable suspicious-newcomer alerts. Usage: joinalert {on/off}",
+    )
+    async def cmd_joinalert(self, event: events.NewMessage.Event) -> None:
+        if not event.is_group:
+            await self.edit(event, self.strings["not_a_group"], as_html=True)
+            return
+
+        arg = self.args_raw(event).strip().lower()
+        enabled = arg != "off"
+        await self._save_joinalert_cfg(event.chat_id, enabled)
+
+        key = "joinalert_on" if enabled else "joinalert_off"
+        await self.edit(event, self.strings[key], as_html=True)
 
     # ---------- antiflood watcher ----------
 
