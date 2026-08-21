@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import time
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -84,9 +85,14 @@ class Guard(ModuleBase):
         return f'<a href="tg://user?id={user.id}">{name}</a>'
 
     async def _get_flood_cfg(self, chat_id: int) -> dict[str, Any]:
-        cfg = await self.db.get(f"flood_{chat_id}")
-        if isinstance(cfg, dict):
-            return cfg
+        raw = await self.db.db_get(self.name, f"flood_{chat_id}")
+        if raw:
+            try:
+                cfg = json.loads(raw)
+                if isinstance(cfg, dict):
+                    return cfg
+            except Exception:
+                pass
         return {
             "enabled": False,
             "count": self.DEFAULT_FLOOD_COUNT,
@@ -95,7 +101,7 @@ class Guard(ModuleBase):
         }
 
     async def _save_flood_cfg(self, chat_id: int, cfg: dict[str, Any]) -> None:
-        await self.db.set(f"flood_{chat_id}", cfg)
+        await self.db.db_set(self.name, f"flood_{chat_id}", json.dumps(cfg))
 
     async def _mute_user(self, chat_id: int, user: Any, minutes: int) -> None:
         until = datetime.now(UTC) + timedelta(minutes=minutes)
@@ -263,30 +269,22 @@ class Guard(ModuleBase):
             return
 
         raw = self.args_raw(event).strip()
-        ids: list[int] = []
 
-        try:
-            if event.reply_to_msg_id:
-                async for msg in self.client.iter_messages(
-                    event.chat_id,
-                    min_id=event.reply_to_msg_id - 1,
-                    max_id=event.id,
-                ):
-                    ids.append(msg.id)
-            elif raw.isdigit():
-                count = max(1, int(raw))
-                async for msg in self.client.iter_messages(event.chat_id, limit=count + 1):
-                    ids.append(msg.id)
-            else:
-                await self.edit(event, self.strings["purge_need_reply_or_count"], as_html=True)
-                return
-        except Exception:
-            await self.edit(event, self.strings["error"], as_html=True)
-            return
-
-        if not ids:
+        if event.reply_to_msg_id:
+            start_id = event.reply_to_msg_id
+        elif raw.isdigit():
+            start_id = max(1, event.id - max(1, int(raw)))
+        else:
             await self.edit(event, self.strings["purge_need_reply_or_count"], as_html=True)
             return
+
+        # Message IDs are sequential per chat, so the exact set to delete can
+        # be built directly instead of relying on iter_messages(min_id=,
+        # max_id=) pagination quirks. delete_messages silently ignores IDs
+        # that don't exist (already deleted / service messages), so this is
+        # safe even across small gaps. Capped to avoid deleting huge ranges
+        # by accident.
+        ids = list(range(start_id, event.id + 1))[:3000]
 
         try:
             await self.client.delete_messages(event.chat_id, ids)
